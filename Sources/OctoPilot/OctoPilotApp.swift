@@ -900,6 +900,7 @@ struct Sidebar: View {
                 Label(model.t("rules"), systemImage: "list.bullet.rectangle")
                     .padding(.vertical, 9).padding(.horizontal, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(section == .exit ? Color.accentColor.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
@@ -908,6 +909,7 @@ struct Sidebar: View {
                 Label(model.t("launch"), systemImage: "play.circle")
                     .padding(.vertical, 9).padding(.horizontal, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(section == .launch ? Color.accentColor.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
@@ -916,6 +918,7 @@ struct Sidebar: View {
                 Label(model.t("settings"), systemImage: "gearshape")
                     .padding(.vertical, 9).padding(.horizontal, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(section == .settings ? Color.accentColor.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
