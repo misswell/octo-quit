@@ -18,11 +18,23 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Show build environment
         run: |
           swift --version
           xcodebuild -version
+
+      - name: Resolve app version
+        id: version
+        run: |
+          version="$(./Scripts/version.sh)"
+          build_number="$(git rev-list --count HEAD)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "OCTOPILOT_VERSION=$version" >> "$GITHUB_ENV"
+          echo "OCTOPILOT_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "Building OctoPilot $version ($build_number)"
 
       - name: Build release binary
         run: swift build -c release
@@ -36,7 +48,7 @@ jobs:
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OctoPilot-macos
+          name: OctoPilot-${{ steps.version.outputs.version }}-macos
           path: OctoPilot.app
           retention-days: 14
 

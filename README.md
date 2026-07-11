@@ -25,4 +25,4 @@ The built app is `OctoPilot.app` in the project root. macOS may prompt for permi
 
 ## GitHub Actions
 
-The macOS workflow builds, packages, verifies, and uploads the app on pushes to `main` and pull requests. Pushing a version tag such as `v1.0.0` also creates a GitHub Release with a zipped `OctoPilot.app` archive.
+The macOS workflow builds, packages, verifies, and uploads the app on pushes to `main` and pull requests. Each commit after the latest version tag automatically increments the patch version: commits after `v1.0.0` build as `1.0.1`, `1.0.2`, and so on. A new tag becomes the next version baseline. Pushing a version tag such as `v1.1.0` also creates a GitHub Release with a zipped `OctoPilot.app` archive.
