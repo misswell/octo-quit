@@ -46,3 +46,5 @@ open OctoPilot.app
 2. 打包 `OctoPilot.app`；
 3. 校验应用签名；
 4. 上传 App 构建产物，保留 14 天。
+
+推送版本标签（例如 `v1.0.0`）时，流水线还会创建 GitHub Release，并上传压缩后的 `OctoPilot.app`。
