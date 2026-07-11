@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md)
 
-A native macOS menu-bar app inspired by Quitter. Each app can have independent rules to:
+A native macOS menu-bar app that helps you manage distracting apps automatically. Each app can have independent rules to:
 
 - hide after a period of inactivity;
 - quit after a period of inactivity;
