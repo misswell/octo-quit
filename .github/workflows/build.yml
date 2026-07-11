@@ -1,0 +1,40 @@
+name: Build macOS app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Build release binary
+        run: swift build -c release
+
+      - name: Package app bundle
+        run: ./Scripts/build-app.sh
+
+      - name: Verify app signature
+        run: codesign --verify --deep --strict OctoQuit.app
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OctoQuit-macos
+          path: OctoQuit.app
+          retention-days: 14
