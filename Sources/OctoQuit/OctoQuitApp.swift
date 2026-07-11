@@ -39,6 +39,13 @@ struct QuitRule: Identifiable, Codable, Hashable {
     var hasAction: Bool { inactiveHideMinutes != nil || inactiveQuitMinutes != nil || hiddenQuitMinutes != nil }
 }
 
+struct QuitterImportPreview: Identifiable {
+    let id = UUID()
+    let rules: [QuitRule]
+    let skippedCount: Int
+    let isEnforcing: Bool?
+}
+
 enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case system
     case english
@@ -76,6 +83,8 @@ enum AppText {
         "importQuitterSuccess": "已导入 %d 条规则，跳过 %d 条重复或无效规则。", "importQuitterEmpty": "没有发现可导入的新规则。",
         "importQuitterError": "无法导入配置文件：%@", "importQuitterInvalid": "这不是受支持的 Quitter 偏好文件。",
         "importQuitterNotFound": "未找到 Quitter 配置文件：%@",
+        "importQuitterConfirmTitle": "确认导入", "importQuitterConfirmMessage": "找到 %d 条可导入规则，另有 %d 条重复或无效规则将被跳过。是否导入？",
+        "import": "导入",
         "languageDescription": "选择 OctoQuit 的显示语言。更改会立即生效。", "systemLanguage": "跟随系统",
         "english": "English", "simplifiedChinese": "简体中文", "checkNow": "立即检查", "startAtLogin": "登录时启动",
         "showApp": "显示 OctoQuit", "quitApp": "退出 OctoQuit", "enabledStatus": "OctoQuit：已启用",
@@ -119,6 +128,8 @@ enum AppText {
             "importQuitterSuccess": "Imported %d rules and skipped %d duplicate or invalid rules.", "importQuitterEmpty": "No new rules were found to import.",
             "importQuitterError": "Couldn’t import the configuration file: %@", "importQuitterInvalid": "This is not a supported Quitter preferences file.",
             "importQuitterNotFound": "Quitter configuration file not found: %@",
+            "importQuitterConfirmTitle": "Confirm Import", "importQuitterConfirmMessage": "Found %d rules to import. %d duplicate or invalid rules will be skipped. Import them?",
+            "import": "Import",
             "minute": "minute", "minutes": "minutes", "language": "Language", "languageDescription": "Choose OctoQuit’s display language. Changes apply immediately.",
             "systemLanguage": "System Language", "english": "English", "simplifiedChinese": "Simplified Chinese", "checkNow": "Check now",
             "startAtLogin": "Start at Login", "showApp": "Show OctoQuit", "quitApp": "Quit OctoQuit", "enabledStatus": "OctoQuit: Enabled",
@@ -237,7 +248,13 @@ final class QuitterModel: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([configurationURL])
     }
 
-    func importQuitterConfiguration(from url: URL) {
+    func prepareQuitterImportFromDefaultLocation() -> QuitterImportPreview? {
+        let url = Self.defaultQuitterConfigurationURL()
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            alertMessage = t("importQuitterNotFound", url.path)
+            return nil
+        }
+
         do {
             let data = try Data(contentsOf: url)
             let propertyList = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
@@ -279,30 +296,27 @@ final class QuitterModel: ObservableObject {
 
             guard !imported.isEmpty else {
                 alertMessage = t("importQuitterEmpty")
-                return
+                return nil
             }
-            rules.append(contentsOf: imported)
-            if let active = root["active"] as? NSNumber {
-                isLoading = true
-                isEnforcing = active.boolValue
-                isLoading = false
-            }
-            save()
-            alertMessage = t("importQuitterSuccess", imported.count, skipped)
+            let importedEnforcementState = (root["active"] as? NSNumber)?.boolValue
+            return QuitterImportPreview(rules: imported, skippedCount: skipped, isEnforcing: importedEnforcementState)
         } catch ImportError.invalidFormat {
             alertMessage = t("importQuitterInvalid")
         } catch {
             alertMessage = t("importQuitterError", error.localizedDescription)
         }
+        return nil
     }
 
-    func importQuitterConfigurationFromDefaultLocation() {
-        let url = Self.defaultQuitterConfigurationURL()
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            alertMessage = t("importQuitterNotFound", url.path)
-            return
+    func importQuitterConfiguration(_ preview: QuitterImportPreview) {
+        rules.append(contentsOf: preview.rules)
+        if let isEnforcing = preview.isEnforcing {
+            isLoading = true
+            self.isEnforcing = isEnforcing
+            isLoading = false
         }
-        importQuitterConfiguration(from: url)
+        save()
+        alertMessage = t("importQuitterSuccess", preview.rules.count, preview.skippedCount)
     }
 
     func evaluateRules() {
@@ -824,6 +838,7 @@ struct MenuBarView: View {
 
 struct SettingsView: View {
     @EnvironmentObject private var model: QuitterModel
+    @State private var quitterImportPreview: QuitterImportPreview?
     var body: some View {
         VStack(alignment: .leading, spacing: 26) {
             VStack(alignment: .leading, spacing: 5) {
@@ -855,11 +870,22 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(model.t("importQuitter")).font(.headline)
                 Text(model.t("importQuitterDescription")).font(.subheadline).foregroundStyle(.secondary)
-                Button(model.t("importQuitter")) { model.importQuitterConfigurationFromDefaultLocation() }
+                Button(model.t("importQuitter")) { quitterImportPreview = model.prepareQuitterImportFromDefaultLocation() }
             }
             Spacer()
         }
         .padding(.horizontal, 36).padding(.top, 34).padding(.bottom, 30)
+        .alert(model.t("importQuitterConfirmTitle"), isPresented: Binding(get: { quitterImportPreview != nil }, set: { if !$0 { quitterImportPreview = nil } })) {
+            Button(model.t("cancel"), role: .cancel) { quitterImportPreview = nil }
+            Button(model.t("import")) {
+                if let preview = quitterImportPreview { model.importQuitterConfiguration(preview) }
+                quitterImportPreview = nil
+            }
+        } message: {
+            if let preview = quitterImportPreview {
+                Text(model.t("importQuitterConfirmMessage", preview.rules.count, preview.skippedCount))
+            }
+        }
     }
 
 }
