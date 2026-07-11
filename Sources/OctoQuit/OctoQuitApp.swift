@@ -72,9 +72,10 @@ enum AppText {
         "browseApplications": "从磁盘选择应用", "noRunningApps": "未检测到可选的运行应用",
         "configFile": "配置文件", "configDescription": "规则和偏好保存在此本机文件中。更新或替换 OctoQuit.app 不会影响它。",
         "revealInFinder": "在访达中显示", "configSaveError": "无法保存配置文件：%@",
-        "importQuitter": "导入 Quitter 配置…", "importQuitterDescription": "导入旧规则；已存在相同应用标识的规则会被跳过。",
+        "importQuitter": "导入 Quitter 配置", "importQuitterDescription": "直接从 Quitter 的本机偏好文件导入规则；已存在相同应用标识的规则会被跳过。",
         "importQuitterSuccess": "已导入 %d 条规则，跳过 %d 条重复或无效规则。", "importQuitterEmpty": "没有发现可导入的新规则。",
         "importQuitterError": "无法导入配置文件：%@", "importQuitterInvalid": "这不是受支持的 Quitter 偏好文件。",
+        "importQuitterNotFound": "未找到 Quitter 配置文件：%@",
         "languageDescription": "选择 OctoQuit 的显示语言。更改会立即生效。", "systemLanguage": "跟随系统",
         "english": "English", "simplifiedChinese": "简体中文", "checkNow": "立即检查", "startAtLogin": "登录时启动",
         "showApp": "显示 OctoQuit", "quitApp": "退出 OctoQuit", "enabledStatus": "OctoQuit：已启用",
@@ -114,9 +115,10 @@ enum AppText {
             "browseApplications": "Choose an app from disk", "noRunningApps": "No eligible running applications found",
             "configFile": "Configuration file", "configDescription": "Rules and preferences are stored in this local file. Updating or replacing OctoQuit.app will not affect it.",
             "revealInFinder": "Show in Finder", "configSaveError": "Couldn’t save the configuration file: %@",
-            "importQuitter": "Import Quitter Configuration…", "importQuitterDescription": "Import legacy rules; matching app identifiers already in your rules are skipped.",
+            "importQuitter": "Import Quitter Configuration", "importQuitterDescription": "Import rules directly from Quitter’s local preferences file; matching app identifiers already in your rules are skipped.",
             "importQuitterSuccess": "Imported %d rules and skipped %d duplicate or invalid rules.", "importQuitterEmpty": "No new rules were found to import.",
             "importQuitterError": "Couldn’t import the configuration file: %@", "importQuitterInvalid": "This is not a supported Quitter preferences file.",
+            "importQuitterNotFound": "Quitter configuration file not found: %@",
             "minute": "minute", "minutes": "minutes", "language": "Language", "languageDescription": "Choose OctoQuit’s display language. Changes apply immediately.",
             "systemLanguage": "System Language", "english": "English", "simplifiedChinese": "Simplified Chinese", "checkNow": "Check now",
             "startAtLogin": "Start at Login", "showApp": "Show OctoQuit", "quitApp": "Quit OctoQuit", "enabledStatus": "OctoQuit: Enabled",
@@ -294,6 +296,15 @@ final class QuitterModel: ObservableObject {
         }
     }
 
+    func importQuitterConfigurationFromDefaultLocation() {
+        let url = Self.defaultQuitterConfigurationURL()
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            alertMessage = t("importQuitterNotFound", url.path)
+            return
+        }
+        importQuitterConfiguration(from: url)
+    }
+
     func evaluateRules() {
         guard isEnforcing else { return }
         let now = Date()
@@ -419,6 +430,11 @@ final class QuitterModel: ObservableObject {
     private static func defaultConfigurationURL() -> URL {
         let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return applicationSupport.appendingPathComponent("OctoQuit", isDirectory: true).appendingPathComponent("config.json")
+    }
+
+    private static func defaultQuitterConfigurationURL() -> URL {
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/Preferences/com.marcoarment.quitter.plist")
     }
 
     private func minutes(fromQuitterInterval value: Any?) -> Int? {
@@ -839,26 +855,11 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(model.t("importQuitter")).font(.headline)
                 Text(model.t("importQuitterDescription")).font(.subheadline).foregroundStyle(.secondary)
-                Button(model.t("importQuitter"), action: importQuitterConfiguration)
+                Button(model.t("importQuitter")) { model.importQuitterConfigurationFromDefaultLocation() }
             }
             Spacer()
         }
         .padding(.horizontal, 36).padding(.top, 34).padding(.bottom, 30)
     }
 
-    private func importQuitterConfiguration() {
-        let panel = NSOpenPanel()
-        panel.title = model.t("importQuitter")
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.propertyList]
-        let defaultFile = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Preferences/com.marcoarment.quitter.plist")
-        if FileManager.default.fileExists(atPath: defaultFile.path) {
-            panel.directoryURL = defaultFile.deletingLastPathComponent()
-            panel.nameFieldStringValue = defaultFile.lastPathComponent
-        }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.importQuitterConfiguration(from: url)
-    }
 }
