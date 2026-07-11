@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>OctoQuit</string>
+	<string>OctoPilot</string>
 	<key>CFBundleExecutable</key>
-	<string>OctoQuit</string>
+	<string>OctoPilot</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.octoqit.app</string>
+	<string>com.misswell.octopilot</string>
 	<key>CFBundleName</key>
-	<string>OctoQuit</string>
+	<string>OctoPilot</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>OctoQuit needs permission to manage inactive apps.</string>
+	<string>OctoPilot needs permission to manage inactive apps.</string>
 </dict>
 </plist>

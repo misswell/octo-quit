@@ -5,11 +5,11 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 @main
-struct OctoQuitApp: App {
-    @StateObject private var model = QuitterModel()
+struct OctoPilotApp: App {
+    @StateObject private var model = OctoPilotModel()
 
     var body: some Scene {
-        WindowGroup("OctoQuit") {
+        WindowGroup("OctoPilot") {
             ContentView().environmentObject(model)
                 .frame(minWidth: 900, minHeight: 620)
         }
@@ -97,7 +97,7 @@ enum AppText {
         "browse": "浏览…", "minute": "分钟", "minutes": "分钟", "language": "语言",
         "application": "应用", "selectedApp": "已选应用", "changeApp": "更换应用", "runningApps": "正在运行的应用",
         "browseApplications": "从磁盘选择应用", "noRunningApps": "未检测到可选的运行应用",
-        "configFile": "配置文件", "configDescription": "规则和偏好保存在此本机文件中。更新或替换 OctoQuit.app 不会影响它。",
+        "configFile": "配置文件", "configDescription": "规则和偏好保存在此本机文件中。更新或替换 OctoPilot.app 不会影响它。",
         "revealInFinder": "在访达中显示", "configSaveError": "无法保存配置文件：%@",
         "importQuitter": "导入 Quitter 配置", "importQuitterDescription": "直接从 Quitter 的本机偏好文件导入规则；已存在相同应用标识的规则会被跳过。",
         "importQuitterSuccess": "已导入 %d 条规则，跳过 %d 条重复或无效规则。", "importQuitterEmpty": "没有发现可导入的新规则。",
@@ -105,15 +105,15 @@ enum AppText {
         "importQuitterNotFound": "未找到 Quitter 配置文件：%@",
         "importQuitterConfirmTitle": "确认导入", "importQuitterConfirmMessage": "找到 %d 条可导入规则，另有 %d 条重复或无效规则将被跳过。是否导入？",
         "import": "导入",
-        "languageDescription": "选择 OctoQuit 的显示语言。更改会立即生效。", "systemLanguage": "跟随系统",
+        "languageDescription": "选择 OctoPilot 的显示语言。更改会立即生效。", "systemLanguage": "跟随系统",
         "english": "English", "simplifiedChinese": "简体中文", "checkNow": "立即检查", "startAtLogin": "登录时启动",
-        "showApp": "显示 OctoQuit", "quitApp": "退出 OctoQuit", "enabledStatus": "OctoQuit：已启用",
-        "disabledStatus": "OctoQuit：已停用", "disableApp": "停用 OctoQuit", "enableApp": "启用 OctoQuit",
+        "showApp": "显示 OctoPilot", "quitApp": "退出 OctoPilot", "enabledStatus": "OctoPilot：已启用",
+        "disabledStatus": "OctoPilot：已停用", "disableApp": "停用 OctoPilot", "enableApp": "启用 OctoPilot",
         "loginError": "无法更新登录启动项：%@", "aboutAutomation": "自动化", "manageRules": "管理应用规则和界面偏好。",
         "quitsIn": "将在 %d 分钟后退出"
         , "launch": "启动", "launchSubtitle": "在登录后按设定延迟启动应用。", "launchApps": "启动应用",
         "addLaunchApp": "添加启动应用", "addLaunchRule": "添加启动规则", "editLaunchRule": "编辑启动规则",
-        "launchRuleDetail": "选择一个应用，并设置从 OctoQuit 登录启动开始计算的延迟秒数。",
+        "launchRuleDetail": "选择一个应用，并设置从 OctoPilot 登录启动开始计算的延迟秒数。",
         "launchAfter": "登录后 %d 秒启动", "delaySeconds": "延迟秒数", "activateOnLaunch": "启动后显示到前台",
         "runNow": "立即执行", "cancelLaunches": "取消待启动任务", "launchEnabled": "启动计划已启用", "launchPaused": "启动计划已暂停",
         "launchIn": "%d 秒后启动", "launching": "正在启动", "launched": "已启动", "alreadyRunning": "已跳过：应用已在运行",
@@ -153,7 +153,7 @@ enum AppText {
             "cancel": "Cancel", "save": "Save", "chooseApp": "Choose an app", "chooseRunning": "Choose a running app", "browse": "Browse…",
             "application": "Application", "selectedApp": "Selected application", "changeApp": "Change app", "runningApps": "Running applications",
             "browseApplications": "Choose an app from disk", "noRunningApps": "No eligible running applications found",
-            "configFile": "Configuration file", "configDescription": "Rules and preferences are stored in this local file. Updating or replacing OctoQuit.app will not affect it.",
+            "configFile": "Configuration file", "configDescription": "Rules and preferences are stored in this local file. Updating or replacing OctoPilot.app will not affect it.",
             "revealInFinder": "Show in Finder", "configSaveError": "Couldn’t save the configuration file: %@",
             "importQuitter": "Import Quitter Configuration", "importQuitterDescription": "Import rules directly from Quitter’s local preferences file; matching app identifiers already in your rules are skipped.",
             "importQuitterSuccess": "Imported %d rules and skipped %d duplicate or invalid rules.", "importQuitterEmpty": "No new rules were found to import.",
@@ -161,15 +161,15 @@ enum AppText {
             "importQuitterNotFound": "Quitter configuration file not found: %@",
             "importQuitterConfirmTitle": "Confirm Import", "importQuitterConfirmMessage": "Found %d rules to import. %d duplicate or invalid rules will be skipped. Import them?",
             "import": "Import",
-            "minute": "minute", "minutes": "minutes", "language": "Language", "languageDescription": "Choose OctoQuit’s display language. Changes apply immediately.",
+            "minute": "minute", "minutes": "minutes", "language": "Language", "languageDescription": "Choose OctoPilot’s display language. Changes apply immediately.",
             "systemLanguage": "System Language", "english": "English", "simplifiedChinese": "Simplified Chinese", "checkNow": "Check now",
-            "startAtLogin": "Start at Login", "showApp": "Show OctoQuit", "quitApp": "Quit OctoQuit", "enabledStatus": "OctoQuit: Enabled",
-            "disabledStatus": "OctoQuit: Disabled", "disableApp": "Disable OctoQuit", "enableApp": "Enable OctoQuit",
+            "startAtLogin": "Start at Login", "showApp": "Show OctoPilot", "quitApp": "Quit OctoPilot", "enabledStatus": "OctoPilot: Enabled",
+            "disabledStatus": "OctoPilot: Disabled", "disableApp": "Disable OctoPilot", "enableApp": "Enable OctoPilot",
             "loginError": "Couldn’t update the login item: %@", "aboutAutomation": "AUTOMATION", "manageRules": "Manage app rules and interface preferences.",
             "quitsIn": "Quits in %d min",
             "launch": "Launch", "launchSubtitle": "Launch apps after their configured delay following login.", "launchApps": "LAUNCH APPS",
             "addLaunchApp": "Add launch app", "addLaunchRule": "Add launch rule", "editLaunchRule": "Edit launch rule",
-            "launchRuleDetail": "Choose an app and set its delay in seconds from when OctoQuit starts at login.",
+            "launchRuleDetail": "Choose an app and set its delay in seconds from when OctoPilot starts at login.",
             "launchAfter": "Launch %d sec after login", "delaySeconds": "Delay in seconds", "activateOnLaunch": "Bring to front after launching",
             "runNow": "Run now", "cancelLaunches": "Cancel scheduled launches", "launchEnabled": "Launch plan enabled", "launchPaused": "Launch plan paused",
             "launchIn": "Launches in %d sec", "launching": "Launching", "launched": "Launched", "alreadyRunning": "Skipped: already running",
@@ -183,7 +183,7 @@ enum AppText {
 }
 
 @MainActor
-final class QuitterModel: ObservableObject {
+final class OctoPilotModel: ObservableObject {
     private struct StoredConfiguration: Codable {
         var version: Int
         var rules: [QuitRule]
@@ -231,12 +231,14 @@ final class QuitterModel: ObservableObject {
     private var lastScheduledBootSession: String?
     private var isLoading = false
     private let configurationURL: URL
+    private let legacyConfigurationURL: URL
     private let rulesKey = "OctoQuit.rules.v2"
     private let enforcementKey = "OctoQuit.enforcing"
     private let languageKey = "OctoQuit.language"
 
     init() {
         configurationURL = Self.defaultConfigurationURL()
+        legacyConfigurationURL = Self.legacyConfigurationURL()
         isLoading = true
         load()
         isLoading = false
@@ -530,8 +532,14 @@ final class QuitterModel: ObservableObject {
             return
         }
 
+        if let data = try? Data(contentsOf: legacyConfigurationURL),
+           let configuration = try? JSONDecoder().decode(StoredConfiguration.self, from: data) {
+            apply(configuration)
+            return
+        }
+
         // One-time migration from versions that used UserDefaults.
-        let defaults = UserDefaults.standard
+        let defaults = UserDefaults(suiteName: "com.octoqit.app") ?? .standard
         isEnforcing = defaults.object(forKey: enforcementKey) as? Bool ?? true
         language = AppLanguage(rawValue: defaults.string(forKey: languageKey) ?? "") ?? .system
         guard let data = defaults.data(forKey: rulesKey),
@@ -655,6 +663,11 @@ final class QuitterModel: ObservableObject {
 
     private static func defaultConfigurationURL() -> URL {
         let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return applicationSupport.appendingPathComponent("OctoPilot", isDirectory: true).appendingPathComponent("config.json")
+    }
+
+    private static func legacyConfigurationURL() -> URL {
+        let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return applicationSupport.appendingPathComponent("OctoQuit", isDirectory: true).appendingPathComponent("config.json")
     }
 
@@ -696,7 +709,7 @@ final class QuitterModel: ObservableObject {
 enum MainSection { case exit, launch, settings }
 
 struct ContentView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @State private var showingAdd = false
     @State private var editingRule: QuitRule?
     @State private var showingLaunchAdd = false
@@ -726,7 +739,7 @@ struct ContentView: View {
         .sheet(item: $editingRule) { rule in RuleEditor(rule: rule).environmentObject(model) }
         .sheet(isPresented: $showingLaunchAdd) { LaunchRuleEditor(rule: nil).environmentObject(model) }
         .sheet(item: $editingLaunchRule) { rule in LaunchRuleEditor(rule: rule).environmentObject(model) }
-        .alert("OctoQuit", isPresented: Binding(get: { model.alertMessage != nil }, set: { if !$0 { model.alertMessage = nil } })) {
+        .alert("OctoPilot", isPresented: Binding(get: { model.alertMessage != nil }, set: { if !$0 { model.alertMessage = nil } })) {
             Button("OK", role: .cancel) { model.alertMessage = nil }
         } message: { Text(model.alertMessage ?? "") }
         .onDrop(of: [.fileURL], isTargeted: $isDropTarget, perform: acceptDrop)
@@ -799,13 +812,13 @@ struct ContentView: View {
 }
 
 struct Sidebar: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @Binding var section: MainSection
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "timer").font(.title2.bold()).foregroundStyle(.blue)
-                Text("OctoQuit").font(.headline)
+                Text("OctoPilot").font(.headline)
             }
             .padding(.horizontal, 22).padding(.top, 30).padding(.bottom, 34)
             Button { section = .exit } label: {
@@ -850,7 +863,7 @@ struct Sidebar: View {
 }
 
 struct EmptyRulesView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     let addRule: () -> Void
     var body: some View {
         VStack(spacing: 16) {
@@ -864,7 +877,7 @@ struct EmptyRulesView: View {
 }
 
 struct RuleRow: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     let rule: QuitRule
     let edit: () -> Void
     let toggle: () -> Void
@@ -912,7 +925,7 @@ struct AppIcon: View {
 }
 
 struct RuleEditor: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @Environment(\.dismiss) private var dismiss
     private let original: QuitRule?
     @State private var appName = ""
@@ -1033,7 +1046,7 @@ struct RuleEditor: View {
 }
 
 struct LaunchRulesView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @Binding var showingAdd: Bool
     @Binding var editingRule: LaunchRule?
 
@@ -1100,7 +1113,7 @@ struct LaunchRulesView: View {
 }
 
 struct EmptyLaunchRulesView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     let addRule: () -> Void
     var body: some View {
         VStack(spacing: 16) {
@@ -1114,7 +1127,7 @@ struct EmptyLaunchRulesView: View {
 }
 
 struct LaunchRuleRow: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     let rule: LaunchRule
     let edit: () -> Void
     let toggle: () -> Void
@@ -1153,7 +1166,7 @@ struct LaunchRuleRow: View {
 }
 
 struct LaunchRuleEditor: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @Environment(\.dismiss) private var dismiss
     private let original: LaunchRule?
     @State private var appName = ""
@@ -1252,7 +1265,7 @@ struct LaunchRuleEditor: View {
 }
 
 struct ActionSetting: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     let title: String
     @Binding var enabled: Bool
     @Binding var minutes: Int
@@ -1276,7 +1289,7 @@ struct ActionSetting: View {
 }
 
 struct MenuBarView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     var body: some View {
         Text(model.isEnforcing ? model.t("enabledStatus") : model.t("disabledStatus"))
         Divider()
@@ -1296,7 +1309,7 @@ struct MenuBarView: View {
 }
 
 struct SettingsView: View {
-    @EnvironmentObject private var model: QuitterModel
+    @EnvironmentObject private var model: OctoPilotModel
     @State private var quitterImportPreview: QuitterImportPreview?
     var body: some View {
         VStack(alignment: .leading, spacing: 26) {

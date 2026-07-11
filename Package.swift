@@ -2,8 +2,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "OctoQuit",
+    name: "OctoPilot",
     platforms: [.macOS(.v14)],
-    products: [.executable(name: "OctoQuit", targets: ["OctoQuit"])],
-    targets: [.executableTarget(name: "OctoQuit")]
+    products: [.executable(name: "OctoPilot", targets: ["OctoPilot"])],
+    targets: [.executableTarget(name: "OctoPilot")]
 )

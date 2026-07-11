@@ -30,11 +30,11 @@ jobs:
         run: ./Scripts/build-app.sh
 
       - name: Verify app signature
-        run: codesign --verify --deep --strict OctoQuit.app
+        run: codesign --verify --deep --strict OctoPilot.app
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OctoQuit-macos
-          path: OctoQuit.app
+          name: OctoPilot-macos
+          path: OctoPilot.app
           retention-days: 14

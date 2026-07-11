@@ -1,4 +1,4 @@
-# OctoQuit
+# OctoPilot
 
 [简体中文](README.zh-CN.md)
 
@@ -8,9 +8,9 @@ A native macOS menu-bar app that helps you manage distracting apps automatically
 - quit after a period of inactivity;
 - quit after it has been hidden for a period of time.
 
-It can also launch selected apps after a per-app delay following login. Launch rules use seconds, show a live countdown, skip apps that are already running, and run automatically only when OctoQuit is configured to start at login.
+It can also launch selected apps after a per-app delay following login. Launch rules use seconds, show a live countdown, skip apps that are already running, and run automatically only when OctoPilot is configured to start at login.
 
-Rules, launch plans, and preferences persist in `~/Library/Application Support/OctoQuit/config.json`. This file is independent from the app bundle, so updating or replacing `OctoQuit.app` preserves your configuration. You can also see and reveal the exact path in Settings.
+Rules, launch plans, and preferences persist in `~/Library/Application Support/OctoPilot/config.json`. This file is independent from the app bundle, so updating or replacing `OctoPilot.app` preserves your configuration. On first launch, OctoPilot automatically migrates compatible configuration from the previous version without modifying the original file. You can also see and reveal the exact path in Settings.
 
 You can pick a running app or browse for an `.app` bundle, reorder rules, pause enforcement globally, and choose Start at Login from the menu-bar menu.
 
@@ -18,7 +18,7 @@ You can pick a running app or browse for an `.app` bundle, reorder rules, pause 
 
 ```sh
 ./Scripts/build-app.sh
-open OctoQuit.app
+open OctoPilot.app
 ```
 
-The built app is `OctoQuit.app` in the project root. macOS may prompt for permission before it can hide or terminate other apps.
+The built app is `OctoPilot.app` in the project root. macOS may prompt for permission before it can hide or terminate other apps.
