@@ -118,6 +118,7 @@ enum AppText {
         "addLaunchApp": "添加启动应用", "addLaunchRule": "添加启动规则", "editLaunchRule": "编辑启动规则",
         "launchRuleDetail": "选择一个应用，并设置从 OctoPilot 登录启动开始计算的延迟秒数。",
         "launchAfter": "登录后 %d 秒启动", "delaySeconds": "延迟秒数", "activateOnLaunch": "启动后显示到前台",
+        "launchVisibilityHint": "关闭时，应用启动后将自动隐藏，并恢复之前的前台应用。",
         "runNow": "立即执行", "cancelLaunches": "取消待启动任务", "launchEnabled": "启动计划已启用", "launchPaused": "启动计划已暂停",
         "launchIn": "%d 秒后启动", "launching": "正在启动", "launched": "已启动", "alreadyRunning": "已跳过：应用已在运行",
         "launchCancelled": "已取消", "launchFailed": "启动失败：%@", "noLaunchApps": "尚未添加启动应用",
@@ -174,6 +175,7 @@ enum AppText {
             "addLaunchApp": "Add launch app", "addLaunchRule": "Add launch rule", "editLaunchRule": "Edit launch rule",
             "launchRuleDetail": "Choose an app and set its delay in seconds from when OctoPilot starts at login.",
             "launchAfter": "Launch %d sec after login", "delaySeconds": "Delay in seconds", "activateOnLaunch": "Bring to front after launching",
+            "launchVisibilityHint": "When off, the app is hidden after launch and the previous foreground app is restored.",
             "runNow": "Run now", "cancelLaunches": "Cancel scheduled launches", "launchEnabled": "Launch plan enabled", "launchPaused": "Launch plan paused",
             "launchIn": "Launches in %d sec", "launching": "Launching", "launched": "Launched", "alreadyRunning": "Skipped: already running",
             "launchCancelled": "Cancelled", "launchFailed": "Launch failed: %@", "noLaunchApps": "No launch apps yet",
@@ -770,11 +772,38 @@ final class OctoPilotModel: ObservableObject {
         launchStates[ruleID] = .launching
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = rule.activateOnLaunch
+        let previousFrontmostApplication = NSWorkspace.shared.frontmostApplication
         do {
-            _ = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+            let launchedApplication = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
+            if !rule.activateOnLaunch {
+                await hideAfterLaunch(launchedApplication, restoring: previousFrontmostApplication)
+            }
             launchStates[ruleID] = .launched
         } catch {
             launchStates[ruleID] = .failed(error.localizedDescription)
+        }
+    }
+
+    private func hideAfterLaunch(_ application: NSRunningApplication, restoring previousApplication: NSRunningApplication?) async {
+        // Some apps create or reactivate their first window after the workspace
+        // launch callback returns, so retry briefly without keeping a poller alive.
+        for delayMilliseconds in [0, 250, 750, 1_500] {
+            if delayMilliseconds > 0 {
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMilliseconds))
+                } catch {
+                    return
+                }
+            }
+            guard !application.isTerminated else { return }
+            let stoleFocus = application.isActive
+            application.hide()
+            if stoleFocus,
+               let previousApplication,
+               !previousApplication.isTerminated,
+               previousApplication.processIdentifier != application.processIdentifier {
+                previousApplication.activate(options: [])
+            }
         }
     }
 
@@ -1368,6 +1397,9 @@ struct LaunchRuleEditor: View {
                 Text(model.t("seconds")).font(.caption).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
             }
             Toggle(model.t("activateOnLaunch"), isOn: $activateOnLaunch).toggleStyle(.checkbox)
+            Text(model.t("launchVisibilityHint"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Spacer()
             HStack {
                 Spacer()
