@@ -134,7 +134,7 @@ enum AppText {
         "duplicateRule": "已存在 \"%@\" 的规则。", "selfRule": "OctoPilot 不能隐藏或退出自身。", "enforcing": "规则执行中", "paused": "规则已暂停",
         "enabledChecked": "%d 条已启用 · 检查于 %@", "noApps": "尚未添加应用",
         "noAppsDetail": "添加一个应用，在闲置后自动隐藏或退出。", "addFirstApp": "添加第一个应用",
-        "edit": "编辑", "editRule": "编辑规则", "deleteRule": "删除规则",
+        "edit": "编辑", "editRule": "编辑规则", "deleteRule": "删除规则", "remove": "移除",
         "hideAfter": "闲置 %d 分钟后隐藏", "quitAfter": "闲置 %d 分钟后退出", "quitHidden": "隐藏 %d 分钟后退出",
         "addRule": "添加应用规则", "editAppRule": "编辑应用规则", "ruleDetail": "选择一个应用，然后设置一个或多个自动操作。",
         "hideInactive": "闲置后隐藏", "quitInactive": "闲置后退出", "quitAfterHidden": "隐藏后退出",
@@ -192,7 +192,7 @@ enum AppText {
             "selfRule": "OctoPilot cannot hide or quit itself.",
             "enforcing": "Enforcing rules", "paused": "Rules paused", "enabledChecked": "%d enabled • checked %@",
             "noApps": "No apps yet", "noAppsDetail": "Add an app to automatically hide or quit it after inactivity.",
-            "addFirstApp": "Add your first app", "edit": "Edit", "editRule": "Edit rule", "deleteRule": "Delete rule",
+            "addFirstApp": "Add your first app", "edit": "Edit", "editRule": "Edit rule", "deleteRule": "Delete rule", "remove": "Remove",
             "hideAfter": "Hide after %d min inactive", "quitAfter": "Quit after %d min inactive", "quitHidden": "Quit %d min after hiding",
             "addRule": "Add app rule", "editAppRule": "Edit app rule", "ruleDetail": "Choose an application, then choose one or more automatic actions.",
             "hideInactive": "Hide after inactivity", "quitInactive": "Quit after inactivity", "quitAfterHidden": "Quit after being hidden",
@@ -976,7 +976,12 @@ struct ContentView: View {
         List {
             Section(model.t("apps")) {
                 ForEach(model.rules) { rule in
-                    RuleRow(rule: rule, edit: { editingRule = rule }, toggle: { model.toggleRule(rule) })
+                    RuleRow(
+                        rule: rule,
+                        edit: { editingRule = rule },
+                        toggle: { model.toggleRule(rule) },
+                        remove: { model.remove(rule) }
+                    )
                         .contextMenu {
                             Button(model.t("editRule")) { editingRule = rule }
                             Divider()
@@ -1089,6 +1094,7 @@ struct RuleRow: View {
     let rule: QuitRule
     let edit: () -> Void
     let toggle: () -> Void
+    let remove: () -> Void
     var body: some View {
         HStack(spacing: 14) {
             AppIcon(path: rule.bundlePath)
@@ -1101,6 +1107,7 @@ struct RuleRow: View {
                 QuitCountdownBadge(deadline: deadline)
             }
             Button(model.t("edit"), action: edit).buttonStyle(.borderless)
+            Button(model.t("remove"), role: .destructive, action: remove).buttonStyle(.borderless)
             Toggle("", isOn: Binding(get: { rule.isEnabled }, set: { _ in toggle() })).labelsHidden()
         }
         .padding(.vertical, 5)
@@ -1302,7 +1309,12 @@ struct LaunchRulesView: View {
                 List {
                     Section(model.t("launchApps")) {
                         ForEach(model.launchRules) { rule in
-                            LaunchRuleRow(rule: rule, edit: { editingRule = rule }, toggle: { model.toggleLaunchRule(rule) })
+                            LaunchRuleRow(
+                                rule: rule,
+                                edit: { editingRule = rule },
+                                toggle: { model.toggleLaunchRule(rule) },
+                                remove: { model.removeLaunchRule(rule) }
+                            )
                                 .contextMenu {
                                     Button(model.t("edit")) { editingRule = rule }
                                     Divider()
@@ -1362,6 +1374,7 @@ struct LaunchRuleRow: View {
     let rule: LaunchRule
     let edit: () -> Void
     let toggle: () -> Void
+    let remove: () -> Void
     var body: some View {
         HStack(spacing: 14) {
             AppIcon(path: rule.bundlePath)
@@ -1374,6 +1387,7 @@ struct LaunchRuleRow: View {
                 LaunchStatusBadge(state: state)
             }
             Button(model.t("edit"), action: edit).buttonStyle(.borderless)
+            Button(model.t("remove"), role: .destructive, action: remove).buttonStyle(.borderless)
             Toggle("", isOn: Binding(get: { rule.isEnabled }, set: { _ in toggle() })).labelsHidden()
         }
         .padding(.vertical, 5)
