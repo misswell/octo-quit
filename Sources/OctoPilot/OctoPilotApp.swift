@@ -69,6 +69,48 @@ enum LaunchRuntimeState: Equatable {
     case failed(String)
 }
 
+private actor LaunchGate {
+    private let minimumStartInterval: TimeInterval
+    private var isOccupied = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(minimumStartInterval: TimeInterval) {
+        self.minimumStartInterval = minimumStartInterval
+    }
+
+    func run(_ operation: @escaping @Sendable () async -> Void) async {
+        await acquire()
+        let startedAt = Date()
+        await operation()
+
+        if !Task.isCancelled {
+            let remaining = minimumStartInterval - Date().timeIntervalSince(startedAt)
+            if remaining > 0 {
+                try? await Task.sleep(for: .seconds(remaining))
+            }
+        }
+        release()
+    }
+
+    private func acquire() async {
+        if !isOccupied {
+            isOccupied = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        if waiters.isEmpty {
+            isOccupied = false
+        } else {
+            waiters.removeFirst().resume()
+        }
+    }
+}
+
 enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case system
     case english
@@ -228,6 +270,7 @@ final class OctoPilotModel: ObservableObject {
     @Published private(set) var launchesAtLogin = false
     @Published var language: AppLanguage = .system { didSet { saveIfReady() } }
     private var launchTasks: [UUID: Task<Void, Never>] = [:]
+    private let launchGate = LaunchGate(minimumStartInterval: 3)
     @Published private(set) var launchStates: [UUID: LaunchRuntimeState] = [:]
     @Published private(set) var quitDeadlines: [UUID: Date] = [:]
     private var quitRuntimeStates: [UUID: QuitRuntimeState] = [:]
@@ -755,6 +798,16 @@ final class OctoPilotModel: ObservableObject {
 
     private func launch(ruleID: UUID) async {
         launchTasks[ruleID] = nil
+        await launchGate.run { [weak self] in
+            await self?.performLaunch(ruleID: ruleID)
+        }
+    }
+
+    private func performLaunch(ruleID: UUID) async {
+        guard !Task.isCancelled else {
+            launchStates[ruleID] = .cancelled
+            return
+        }
         guard isLaunchSchedulingEnabled,
               let rule = launchRules.first(where: { $0.id == ruleID }), rule.isEnabled else {
             launchStates[ruleID] = .cancelled
