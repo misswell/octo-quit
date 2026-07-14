@@ -232,6 +232,8 @@ enum AppText {
 
 @MainActor
 final class OctoPilotModel: ObservableObject {
+    private static let safetyCheckInterval: Duration = .seconds(300)
+
     private struct StoredConfiguration: Codable {
         var version: Int
         var rules: [QuitRule]
@@ -277,6 +279,7 @@ final class OctoPilotModel: ObservableObject {
     @Published private(set) var quitDeadlines: [UUID: Date] = [:]
     private var quitRuntimeStates: [UUID: QuitRuntimeState] = [:]
     private var quitTasks: [UUID: Task<Void, Never>] = [:]
+    private var quitWakeDeadlines: [UUID: Date] = [:]
     private var safetyCheckTask: Task<Void, Never>?
     private var workspaceObservers: [NSObjectProtocol] = []
     private var lastScheduledBootSession: String?
@@ -503,21 +506,21 @@ final class OctoPilotModel: ObservableObject {
         ]
         workspaceObservers = names.map { name in
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
-                let bundleIdentifier = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+                let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
                 Task { @MainActor in
-                    self?.handleWorkspaceNotification(name: name, bundleIdentifier: bundleIdentifier)
+                    self?.handleWorkspaceNotification(name: name, application: application)
                 }
             }
         }
     }
 
-    private func handleWorkspaceNotification(name: Notification.Name, bundleIdentifier: String?) {
+    private func handleWorkspaceNotification(name: Notification.Name, application: NSRunningApplication?) {
         let now = Date()
         if name == NSWorkspace.didWakeNotification {
             rebuildQuitSchedule(now: now)
             return
         }
-        guard let bundleIdentifier else { return }
+        guard let bundleIdentifier = application?.bundleIdentifier else { return }
         let matchingRules = rules.filter { $0.bundleIdentifier == bundleIdentifier }
         guard !matchingRules.isEmpty else { return }
         for rule in matchingRules {
@@ -541,8 +544,15 @@ final class OctoPilotModel: ObservableObject {
                 break
             }
             quitRuntimeStates[rule.id] = state
+            if isEnforcing, rule.isEnabled, !isOwnApplication(rule.bundleIdentifier) {
+                evaluateQuitRule(
+                    rule,
+                    app: name == NSWorkspace.didTerminateApplicationNotification ? nil : application,
+                    now: now
+                )
+            }
         }
-        rebuildQuitSchedule(now: now)
+        if isEnforcing { lastChecked = now }
     }
 
     private func rebuildQuitSchedule(now: Date = Date()) {
@@ -566,8 +576,8 @@ final class OctoPilotModel: ObservableObject {
     }
 
     private func evaluateQuitRule(_ rule: QuitRule, app: NSRunningApplication?, now: Date) {
-        cancelQuitTask(for: rule.id)
         guard let app else {
+            cancelQuitTask(for: rule.id)
             quitRuntimeStates[rule.id] = nil
             quitDeadlines[rule.id] = nil
             return
@@ -575,6 +585,7 @@ final class OctoPilotModel: ObservableObject {
 
         var state = quitRuntimeStates[rule.id] ?? QuitRuntimeState()
         if app.isActive {
+            cancelQuitTask(for: rule.id)
             state.lastActiveAt = now
             state.hiddenAt = nil
             state.didHideSinceActive = false
@@ -622,12 +633,18 @@ final class OctoPilotModel: ObservableObject {
         if let quitDeadline { setQuitDeadline(quitDeadline, for: rule.id) }
         else { quitDeadlines[rule.id] = nil }
 
-        guard let nextDeadline = nextDeadlines.filter({ $0 > now }).min() else { return }
+        guard let nextDeadline = nextDeadlines.filter({ $0 > now }).min() else {
+            cancelQuitTask(for: rule.id)
+            return
+        }
         scheduleQuitWake(for: rule.id, at: nextDeadline, now: now)
     }
 
     private func scheduleQuitWake(for id: UUID, at deadline: Date, now: Date) {
+        if quitTasks[id] != nil, quitWakeDeadlines[id] == deadline { return }
+        cancelQuitTask(for: id)
         let delay = max(0, deadline.timeIntervalSince(now))
+        quitWakeDeadlines[id] = deadline
         quitTasks[id] = Task { [weak self] in
             do {
                 try await Task.sleep(for: .seconds(delay))
@@ -644,7 +661,9 @@ final class OctoPilotModel: ObservableObject {
         safetyCheckTask = Task { [weak self] in
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(for: .seconds(60))
+                    // Workspace notifications and per-rule deadline tasks handle normal operation.
+                    // This slower sweep only recovers from a missed system notification.
+                    try await Task.sleep(for: Self.safetyCheckInterval)
                 } catch {
                     return
                 }
@@ -661,7 +680,11 @@ final class OctoPilotModel: ObservableObject {
 
     private func wakeQuitRule(_ id: UUID) {
         quitTasks[id] = nil
-        guard let rule = rules.first(where: { $0.id == id }) else { return }
+        quitWakeDeadlines[id] = nil
+        guard isEnforcing,
+              let rule = rules.first(where: { $0.id == id }),
+              rule.isEnabled,
+              !isOwnApplication(rule.bundleIdentifier) else { return }
         let app = NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == rule.bundleIdentifier }
         let now = Date()
         evaluateQuitRule(rule, app: app, now: now)
@@ -685,6 +708,7 @@ final class OctoPilotModel: ObservableObject {
     private func cancelQuitTask(for id: UUID) {
         quitTasks[id]?.cancel()
         quitTasks[id] = nil
+        quitWakeDeadlines[id] = nil
     }
 
     private func cancelAllQuitTasks(resetRuntime: Bool = false) {
