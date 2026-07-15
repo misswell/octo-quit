@@ -256,7 +256,7 @@ enum AppText {
         "launchModeForeground": "显示到前台", "launchModeHidden": "隐藏应用", "launchModeCloseWindows": "关闭窗口并保留后台（Dock-only）",
         "launchForegroundHint": "应用启动后显示到前台。",
         "launchHiddenHint": "应用启动后自动隐藏，并恢复之前的前台应用。",
-        "launchCloseWindowsHint": "关闭应用的可关闭窗口，但保留后台或菜单栏进程。Dock 图标是否消失由该应用决定。",
+        "launchCloseWindowsHint": "应用启动 10 秒后关闭可关闭窗口，但保留后台或菜单栏进程。Dock 图标是否消失由该应用决定。",
         "launchCloseFailed": "应用已启动，但无法关闭其窗口",
         "runNow": "立即执行", "cancelLaunches": "取消待启动任务", "launchEnabled": "启动计划已启用", "launchPaused": "启动计划已暂停",
         "launchIn": "%d 秒后启动", "launching": "正在启动", "launched": "已启动", "alreadyRunning": "已跳过：应用已在运行",
@@ -320,7 +320,7 @@ enum AppText {
             "launchModeForeground": "Bring to front", "launchModeHidden": "Hide application", "launchModeCloseWindows": "Close windows, keep background (Dock-only)",
             "launchForegroundHint": "Brings the application to the foreground after launch.",
             "launchHiddenHint": "Hides the application after launch and restores the previous foreground app.",
-            "launchCloseWindowsHint": "Closes the app’s closable windows while keeping its background or menu-bar process running. Whether its Dock icon disappears is controlled by that app.",
+            "launchCloseWindowsHint": "Waits 10 seconds after launch, then closes the app’s closable windows while keeping its background or menu-bar process running. Whether its Dock icon disappears is controlled by that app.",
             "launchCloseFailed": "The app launched, but its windows could not be closed",
             "runNow": "Run now", "cancelLaunches": "Cancel scheduled launches", "launchEnabled": "Launch plan enabled", "launchPaused": "Launch plan paused",
             "launchIn": "Launches in %d sec", "launching": "Launching", "launched": "Launched", "alreadyRunning": "Skipped: already running",
@@ -335,6 +335,7 @@ enum AppText {
 @MainActor
 final class OctoPilotModel: ObservableObject {
     private static let safetyCheckInterval: Duration = .seconds(300)
+    private static let closeWindowsLaunchGracePeriod: Duration = .seconds(10)
 
     private struct StoredConfiguration: Codable {
         var version: Int
@@ -1022,7 +1023,13 @@ final class OctoPilotModel: ObservableObject {
     }
 
     private func closeWindowsAfterLaunch(_ application: NSRunningApplication, restoring previousApplication: NSRunningApplication?) async -> Bool {
-        await retryPostLaunchAction(application, restoring: previousApplication) {
+        do {
+            try await Task.sleep(for: Self.closeWindowsLaunchGracePeriod)
+        } catch {
+            return false
+        }
+        guard !application.isTerminated else { return false }
+        return await retryPostLaunchAction(application, restoring: previousApplication) {
             self.closeWindows(of: application).postLaunchResult
         }
     }
