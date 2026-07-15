@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import Darwin
 import ServiceManagement
 import SwiftUI
@@ -30,17 +31,19 @@ struct QuitRule: Identifiable, Codable, Hashable {
     var bundleIdentifier: String
     var bundlePath: String?
     var inactiveHideMinutes: Int?
+    var inactiveCloseMinutes: Int?
     var inactiveQuitMinutes: Int?
     var hiddenQuitMinutes: Int?
     var isEnabled = true
 
-    var hasAction: Bool { inactiveHideMinutes != nil || inactiveQuitMinutes != nil || hiddenQuitMinutes != nil }
+    var hasAction: Bool { inactiveHideMinutes != nil || inactiveCloseMinutes != nil || inactiveQuitMinutes != nil || hiddenQuitMinutes != nil }
 }
 
 private struct QuitRuntimeState {
     var lastActiveAt: Date?
     var hiddenAt: Date?
     var didHideSinceActive = false
+    var didCloseSinceActive = false
 }
 
 struct QuitterImportPreview: Identifiable {
@@ -129,16 +132,18 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
 enum AppText {
     private static let chinese: [String: String] = [
         "rules": "退出", "settings": "设置", "addApp": "添加应用", "apps": "应用",
-        "rulesSubtitle": "在应用闲置一段时间后自动隐藏或退出。",
+        "rulesSubtitle": "在应用闲置一段时间后自动隐藏、关闭窗口或退出。",
         "dropApp": "拖入应用以添加规则", "invalidDrop": "请拖入 macOS 应用（.app）以创建规则。",
-        "duplicateRule": "已存在 \"%@\" 的规则。", "selfRule": "OctoPilot 不能隐藏或退出自身。", "enforcing": "规则执行中", "paused": "规则已暂停",
+        "duplicateRule": "已存在 \"%@\" 的规则。", "selfRule": "OctoPilot 不能管理自身。", "enforcing": "规则执行中", "paused": "规则已暂停",
         "enabledChecked": "%d 条已启用 · 检查于 %@", "noApps": "尚未添加应用",
-        "noAppsDetail": "添加一个应用，在闲置后自动隐藏或退出。", "addFirstApp": "添加第一个应用",
+        "noAppsDetail": "添加一个应用，在闲置后自动隐藏、关闭窗口或退出。", "addFirstApp": "添加第一个应用",
         "edit": "编辑", "editRule": "编辑规则", "deleteRule": "删除规则", "remove": "移除",
         "removeConfirmTitle": "确认移除", "removeConfirmMessage": "确定要移除“%@”吗？此操作会删除对应规则。",
-        "hideAfter": "闲置 %d 分钟后隐藏", "quitAfter": "闲置 %d 分钟后退出", "quitHidden": "隐藏 %d 分钟后退出",
+        "hideAfter": "闲置 %d 分钟后隐藏", "closeAfter": "闲置 %d 分钟后关闭窗口", "quitAfter": "闲置 %d 分钟后退出", "quitHidden": "隐藏 %d 分钟后退出",
         "addRule": "添加应用规则", "editAppRule": "编辑应用规则", "ruleDetail": "选择一个应用，然后设置一个或多个自动操作。",
-        "hideInactive": "闲置后隐藏", "quitInactive": "闲置后退出", "quitAfterHidden": "隐藏后退出",
+        "hideInactive": "闲置后隐藏", "closeInactive": "闲置后关闭窗口", "quitInactive": "闲置后退出", "quitAfterHidden": "隐藏后退出",
+        "closeWindowHint": "关闭应用的可关闭窗口，但保留后台进程。Dock 图标是否消失由该应用决定。",
+        "accessibilityRequired": "“关闭窗口”需要辅助功能权限。请在系统设置 → 隐私与安全性 → 辅助功能中允许 OctoPilot。",
         "cancel": "取消", "save": "存储", "chooseApp": "选择应用", "chooseRunning": "选择正在运行的应用",
         "browse": "浏览…", "minute": "分钟", "minutes": "分钟", "language": "语言",
         "application": "应用", "selectedApp": "已选应用", "changeApp": "更换应用", "runningApps": "正在运行的应用",
@@ -188,16 +193,18 @@ enum AppText {
 
     private static let english: [String: String] = [
             "rules": "Exit", "settings": "Settings", "addApp": "Add app", "apps": "APPS",
-            "rulesSubtitle": "Hide or quit apps after they’ve been inactive.", "dropApp": "Drop an app to add its rule",
+            "rulesSubtitle": "Hide, close windows, or quit apps after they’ve been inactive.", "dropApp": "Drop an app to add its rule",
             "invalidDrop": "Drop a macOS application (.app) to create a rule.", "duplicateRule": "A rule for \"%@\" already exists.",
-            "selfRule": "OctoPilot cannot hide or quit itself.",
+            "selfRule": "OctoPilot cannot manage itself.",
             "enforcing": "Enforcing rules", "paused": "Rules paused", "enabledChecked": "%d enabled • checked %@",
-            "noApps": "No apps yet", "noAppsDetail": "Add an app to automatically hide or quit it after inactivity.",
+            "noApps": "No apps yet", "noAppsDetail": "Add an app to automatically hide, close its windows, or quit it after inactivity.",
             "addFirstApp": "Add your first app", "edit": "Edit", "editRule": "Edit rule", "deleteRule": "Delete rule", "remove": "Remove",
             "removeConfirmTitle": "Confirm Removal", "removeConfirmMessage": "Remove “%@”? This will delete its rule.",
-            "hideAfter": "Hide after %d min inactive", "quitAfter": "Quit after %d min inactive", "quitHidden": "Quit %d min after hiding",
+            "hideAfter": "Hide after %d min inactive", "closeAfter": "Close windows after %d min inactive", "quitAfter": "Quit after %d min inactive", "quitHidden": "Quit %d min after hiding",
             "addRule": "Add app rule", "editAppRule": "Edit app rule", "ruleDetail": "Choose an application, then choose one or more automatic actions.",
-            "hideInactive": "Hide after inactivity", "quitInactive": "Quit after inactivity", "quitAfterHidden": "Quit after being hidden",
+            "hideInactive": "Hide after inactivity", "closeInactive": "Close windows after inactivity", "quitInactive": "Quit after inactivity", "quitAfterHidden": "Quit after being hidden",
+            "closeWindowHint": "Closes the app’s closable windows while leaving its process running. Whether its Dock icon disappears is controlled by that app.",
+            "accessibilityRequired": "Closing windows requires Accessibility access. Allow OctoPilot in System Settings → Privacy & Security → Accessibility.",
             "cancel": "Cancel", "save": "Save", "chooseApp": "Choose an app", "chooseRunning": "Choose a running app", "browse": "Browse…",
             "application": "Application", "selectedApp": "Selected application", "changeApp": "Change app", "runningApps": "Running applications",
             "browseApplications": "Choose an app from disk", "noRunningApps": "No eligible running applications found",
@@ -244,7 +251,7 @@ final class OctoPilotModel: ObservableObject {
         var lastScheduledBootSession: String?
 
         init(rules: [QuitRule], isEnforcing: Bool, language: AppLanguage, launchRules: [LaunchRule], isLaunchSchedulingEnabled: Bool, lastScheduledBootSession: String?) {
-            version = 2
+            version = 3
             self.rules = rules
             self.isEnforcing = isEnforcing
             self.language = language
@@ -589,6 +596,7 @@ final class OctoPilotModel: ObservableObject {
             state.lastActiveAt = now
             state.hiddenAt = nil
             state.didHideSinceActive = false
+            state.didCloseSinceActive = false
             quitRuntimeStates[rule.id] = state
             quitDeadlines[rule.id] = nil
             return
@@ -601,6 +609,7 @@ final class OctoPilotModel: ObservableObject {
         }
 
         let hideDeadline = state.didHideSinceActive ? nil : deadline(minutes: rule.inactiveHideMinutes, since: state.lastActiveAt)
+        let closeDeadline = state.didCloseSinceActive ? nil : deadline(minutes: rule.inactiveCloseMinutes, since: state.lastActiveAt)
         let initialQuitDeadline = [
             deadline(minutes: rule.inactiveQuitMinutes, since: state.lastActiveAt),
             deadline(minutes: rule.hiddenQuitMinutes, since: state.hiddenAt)
@@ -615,6 +624,16 @@ final class OctoPilotModel: ObservableObject {
         }
 
         var nextDeadlines = [Date]()
+        if let closeDeadline, closeDeadline <= now {
+            if closeWindows(of: app) {
+                state.didCloseSinceActive = true
+            } else {
+                nextDeadlines.append(now.addingTimeInterval(60))
+            }
+        } else if let closeDeadline {
+            nextDeadlines.append(closeDeadline)
+        }
+
         if let hideDeadline, hideDeadline <= now {
             app.hide()
             state.didHideSinceActive = true
@@ -638,6 +657,31 @@ final class OctoPilotModel: ObservableObject {
             return
         }
         scheduleQuitWake(for: rule.id, at: nextDeadline, now: now)
+    }
+
+    private func closeWindows(of application: NSRunningApplication) -> Bool {
+        guard AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) else {
+            if alertMessage == nil { alertMessage = t("accessibilityRequired") }
+            return false
+        }
+
+        let appElement = AXUIElementCreateApplication(application.processIdentifier)
+        var windowsValue: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsValue)
+        guard result == .success else { return result == .noValue || result == .attributeUnsupported }
+        guard let windows = windowsValue as? [AXUIElement] else { return true }
+
+        var actionFailed = false
+        for window in windows {
+            var closeButtonValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(window, kAXCloseButtonAttribute as CFString, &closeButtonValue) == .success,
+                  let closeButtonValue else { continue }
+            let closeButton = unsafeDowncast(closeButtonValue, to: AXUIElement.self)
+            if AXUIElementPerformAction(closeButton, kAXPressAction as CFString) != .success {
+                actionFailed = true
+            }
+        }
+        return !actionFailed
     }
 
     private func scheduleQuitWake(for id: UUID, at deadline: Date, now: Date) {
@@ -1155,6 +1199,7 @@ struct RuleRow: View {
     private func ruleSummary(_ rule: QuitRule) -> String {
         var items: [String] = []
         if let m = rule.inactiveHideMinutes { items.append(model.t("hideAfter", m)) }
+        if let m = rule.inactiveCloseMinutes { items.append(model.t("closeAfter", m)) }
         if let m = rule.inactiveQuitMinutes { items.append(model.t("quitAfter", m)) }
         if let m = rule.hiddenQuitMinutes { items.append(model.t("quitHidden", m)) }
         return items.joined(separator: " • ")
@@ -1213,6 +1258,8 @@ struct RuleEditor: View {
     @State private var bundlePath: String?
     @State private var hideEnabled = false
     @State private var hideMinutes = 10
+    @State private var closeEnabled = false
+    @State private var closeMinutes = 10
     @State private var inactiveQuitEnabled = true
     @State private var inactiveQuitMinutes = 10
     @State private var hiddenQuitEnabled = false
@@ -1226,6 +1273,8 @@ struct RuleEditor: View {
         _bundlePath = State(initialValue: rule?.bundlePath)
         _hideEnabled = State(initialValue: rule?.inactiveHideMinutes != nil)
         _hideMinutes = State(initialValue: rule?.inactiveHideMinutes ?? 10)
+        _closeEnabled = State(initialValue: rule?.inactiveCloseMinutes != nil)
+        _closeMinutes = State(initialValue: rule?.inactiveCloseMinutes ?? 10)
         _inactiveQuitEnabled = State(initialValue: rule?.inactiveQuitMinutes != nil || rule == nil)
         _inactiveQuitMinutes = State(initialValue: rule?.inactiveQuitMinutes ?? 10)
         _hiddenQuitEnabled = State(initialValue: rule?.hiddenQuitMinutes != nil)
@@ -1239,12 +1288,14 @@ struct RuleEditor: View {
             appPicker
             Divider()
             ActionSetting(title: model.t("hideInactive"), enabled: $hideEnabled, minutes: $hideMinutes)
+            ActionSetting(title: model.t("closeInactive"), enabled: $closeEnabled, minutes: $closeMinutes)
+            Text(model.t("closeWindowHint")).font(.caption).foregroundStyle(.secondary)
             ActionSetting(title: model.t("quitInactive"), enabled: $inactiveQuitEnabled, minutes: $inactiveQuitMinutes)
             ActionSetting(title: model.t("quitAfterHidden"), enabled: $hiddenQuitEnabled, minutes: $hiddenQuitMinutes)
             Spacer()
-            HStack { Spacer(); Button(model.t("cancel")) { dismiss() }; Button(original == nil ? model.t("addApp") : model.t("save")) { save() }.buttonStyle(.borderedProminent).disabled(bundleIdentifier.isEmpty || !(hideEnabled || inactiveQuitEnabled || hiddenQuitEnabled)) }
+            HStack { Spacer(); Button(model.t("cancel")) { dismiss() }; Button(original == nil ? model.t("addApp") : model.t("save")) { save() }.buttonStyle(.borderedProminent).disabled(bundleIdentifier.isEmpty || !(hideEnabled || closeEnabled || inactiveQuitEnabled || hiddenQuitEnabled)) }
         }
-        .padding(28).frame(width: 520, height: 535)
+        .padding(28).frame(width: 520, height: 625)
         .onAppear { runningApps = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular && $0.bundleIdentifier != Bundle.main.bundleIdentifier }.sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") } }
     }
 
@@ -1309,6 +1360,7 @@ struct RuleEditor: View {
         let rule = QuitRule(
             id: original?.id ?? UUID(), appName: appName, bundleIdentifier: bundleIdentifier, bundlePath: bundlePath,
             inactiveHideMinutes: hideEnabled ? hideMinutes : nil,
+            inactiveCloseMinutes: closeEnabled ? closeMinutes : nil,
             inactiveQuitMinutes: inactiveQuitEnabled ? inactiveQuitMinutes : nil,
             hiddenQuitMinutes: hiddenQuitEnabled ? hiddenQuitMinutes : nil,
             isEnabled: original?.isEnabled ?? true

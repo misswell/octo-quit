@@ -5,6 +5,7 @@
 A native macOS menu-bar app that helps you manage distracting apps automatically. Each app can have independent rules to:
 
 - hide after a period of inactivity;
+- close its closable windows after inactivity while leaving its process running;
 - quit after a period of inactivity;
 - quit after it has been hidden for a period of time.
 
@@ -21,7 +22,7 @@ You can pick a running app or browse for an `.app` bundle, reorder rules, pause 
 open OctoPilot.app
 ```
 
-The built app is `OctoPilot.app` in the project root. macOS may prompt for permission before it can hide or terminate other apps.
+The built app is `OctoPilot.app` in the project root. The Close Windows action requires Accessibility access in System Settings. Whether a target app removes its Dock icon after its windows close is controlled by that app.
 
 ## GitHub Actions
 
