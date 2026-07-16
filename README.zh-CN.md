@@ -41,7 +41,7 @@ open OctoPilot.app
 
 当前本地与 GitHub Release 构建使用 ad-hoc 签名，因此每次更新都可能产生新的代码身份，macOS 可能要求重新授予辅助功能权限。要让授权在版本升级后稳定继承，需要使用同一 Developer ID 证书签名后再分发。
 
-如果升级后辅助功能列表中已经勾选 OctoPilot，但“关闭窗口”仍提示无权限，仅关闭再打开开关可能不会更新旧签名记录。请先从菜单栏彻底退出 OctoPilot（关闭窗口不会退出后台进程），再从列表中移除旧条目，点击 `+` 重新添加当前 `/Applications/OctoPilot.app`，然后重新打开 OctoPilot。若选中 OctoPilot 时“移除”按钮为灰色，请退出 OctoPilot 后在终端运行 `tccutil reset Accessibility com.misswell.octopilot`，再重新添加。运行规则只会静默检查权限，不会在后台反复重新请求。
+如果升级后辅助功能列表中已经勾选 OctoPilot，但“关闭窗口”仍提示无权限，仅关闭再打开开关可能不会更新旧签名记录。权限提示中可直接点击**重置权限并退出**，OctoPilot 会自动执行 `tccutil reset Accessibility com.misswell.octopilot` 并退出；重新打开应用后再次允许权限即可。运行规则只会静默检查权限，不会在后台反复重新请求。
 
 ## GitHub Actions
 

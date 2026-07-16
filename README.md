@@ -26,7 +26,7 @@ The built app is `OctoPilot.app` in the project root. The Close Windows action r
 
 Local and GitHub Release builds currently use ad-hoc signing, so each update can have a new code identity and macOS may require Accessibility access to be granted again. Preserving that grant reliably across upgrades requires distributing every version with the same Developer ID signing identity.
 
-If OctoPilot remains untrusted after an update even though it is enabled in the Accessibility list, toggling the switch may leave the old signing record in place. Fully quit OctoPilot from its menu-bar menu first (closing its window leaves the background process running), remove the old entry, add the current `/Applications/OctoPilot.app` with the `+` button, then reopen OctoPilot. If Remove is disabled for OctoPilot, quit the app and run `tccutil reset Accessibility com.misswell.octopilot` in Terminal before adding it again. Runtime rules check access silently and do not repeatedly request it in the background.
+If OctoPilot remains untrusted after an update even though it is enabled in the Accessibility list, toggling the switch may leave the old signing record in place. The permission alert offers **Reset Permission and Quit**, which runs `tccutil reset Accessibility com.misswell.octopilot` for you and exits OctoPilot. Reopen the app and grant access again. Runtime rules check access silently and do not repeatedly request it in the background.
 
 ## GitHub Actions
 

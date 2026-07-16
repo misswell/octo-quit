@@ -92,6 +92,37 @@ enum LaunchVisibilityMode: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+struct AccessibilityResetCommand {
+    let bundleIdentifier: String
+
+    var executableURL: URL { URL(fileURLWithPath: "/usr/bin/tccutil") }
+    var arguments: [String] { ["reset", "Accessibility", bundleIdentifier] }
+
+    @discardableResult
+    func run() throws -> Int32 {
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = arguments
+        try process.run()
+        process.waitUntilExit()
+        return process.terminationStatus
+    }
+}
+
+struct AccessibilityRecoveryRequest {
+    private static let key = "OctoPilot.requestAccessibilityAfterReset"
+
+    static func schedule(in defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: key)
+    }
+
+    static func consume(from defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.bool(forKey: key) else { return false }
+        defaults.removeObject(forKey: key)
+        return true
+    }
+}
+
 struct LaunchRule: Identifiable, Codable, Hashable {
     var id = UUID()
     var appName: String
@@ -231,8 +262,10 @@ enum AppText {
         "addRule": "添加应用规则", "editAppRule": "编辑应用规则", "ruleDetail": "选择一个应用，然后设置一个或多个自动操作。",
         "hideInactive": "闲置后隐藏", "closeInactive": "闲置后关闭窗口", "quitInactive": "闲置后退出", "quitAfterHidden": "隐藏后退出",
         "closeWindowHint": "关闭应用的可关闭窗口，但保留后台进程。Dock 图标是否消失由该应用决定。",
-        "accessibilityRequired": "“关闭窗口”需要辅助功能权限。如果升级后已勾选但仍无效，请先从菜单栏彻底退出 OctoPilot，再移除旧条目并重新添加当前应用（%@）。如果“移除”按钮为灰色，请在终端运行：tccutil reset Accessibility com.misswell.octopilot",
+        "accessibilityRequired": "“关闭窗口”需要辅助功能权限。如果升级后已勾选但仍无效，可一键重置权限并退出 OctoPilot；重新打开后再允许权限。当前应用：%@",
         "openAccessibilitySettings": "打开辅助功能设置",
+        "resetAccessibility": "重置权限并退出",
+        "accessibilityResetFailed": "无法重置辅助功能权限：%@",
         "cancel": "取消", "save": "存储", "chooseApp": "选择应用", "chooseRunning": "选择正在运行的应用",
         "browse": "浏览…", "minute": "分钟", "minutes": "分钟", "language": "语言",
         "application": "应用", "selectedApp": "已选应用", "changeApp": "更换应用", "runningApps": "正在运行的应用",
@@ -297,8 +330,10 @@ enum AppText {
             "addRule": "Add app rule", "editAppRule": "Edit app rule", "ruleDetail": "Choose an application, then choose one or more automatic actions.",
             "hideInactive": "Hide after inactivity", "closeInactive": "Close windows after inactivity", "quitInactive": "Quit after inactivity", "quitAfterHidden": "Quit after being hidden",
             "closeWindowHint": "Closes the app’s closable windows while leaving its process running. Whether its Dock icon disappears is controlled by that app.",
-            "accessibilityRequired": "Closing windows requires Accessibility access. If it remains unavailable after an update, fully quit OctoPilot, remove the old entry, and add the current app again (%@). If Remove is disabled, run this in Terminal: tccutil reset Accessibility com.misswell.octopilot",
+            "accessibilityRequired": "Closing windows requires Accessibility access. If it remains unavailable after an update, reset the permission and quit OctoPilot in one step, then reopen it and grant access. Current app: %@",
             "openAccessibilitySettings": "Open Accessibility Settings",
+            "resetAccessibility": "Reset Permission and Quit",
+            "accessibilityResetFailed": "Couldn’t reset Accessibility access: %@",
             "cancel": "Cancel", "save": "Save", "chooseApp": "Choose an app", "chooseRunning": "Choose a running app", "browse": "Browse…",
             "application": "Application", "selectedApp": "Selected application", "changeApp": "Change app", "runningApps": "Running applications",
             "browseApplications": "Choose an app from disk", "noRunningApps": "No eligible running applications found",
@@ -378,6 +413,7 @@ final class OctoPilotModel: ObservableObject {
     @Published private(set) var lastChecked = Date()
     @Published var alertMessage: String?
     @Published private(set) var alertOffersAccessibilitySettings = false
+    @Published private(set) var alertOffersAccessibilityReset = false
     @Published private(set) var launchesAtLogin = false
     @Published var language: AppLanguage = .system { didSet { saveIfReady() } }
     private var launchTasks: [UUID: Task<Void, Never>] = [:]
@@ -409,6 +445,7 @@ final class OctoPilotModel: ObservableObject {
         startSafetyChecks()
         evaluateRules()
         scheduleLaunchPlanForCurrentBootIfNeeded()
+        requestAccessibilityAfterResetIfNeeded()
     }
 
     var enabledCount: Int { rules.filter(\.isEnabled).count }
@@ -429,6 +466,7 @@ final class OctoPilotModel: ObservableObject {
 
     private func showWindowControlGuidance() {
         alertOffersAccessibilitySettings = true
+        alertOffersAccessibilityReset = true
         alertMessage = t("accessibilityRequired", Bundle.main.bundleURL.path)
     }
 
@@ -437,13 +475,37 @@ final class OctoPilotModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
+    func resetAccessibilityAndQuit() {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.misswell.octopilot"
+        do {
+            let status = try AccessibilityResetCommand(bundleIdentifier: bundleIdentifier).run()
+            guard status == 0 else {
+                showAlert(t("accessibilityResetFailed", "tccutil exited with status \(status)"))
+                return
+            }
+            AccessibilityRecoveryRequest.schedule()
+            NSApp.terminate(nil)
+        } catch {
+            showAlert(t("accessibilityResetFailed", error.localizedDescription))
+        }
+    }
+
+    private func requestAccessibilityAfterResetIfNeeded() {
+        guard AccessibilityRecoveryRequest.consume() else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.requestWindowControlAccess()
+        }
+    }
+
     func dismissAlert() {
         alertMessage = nil
         alertOffersAccessibilitySettings = false
+        alertOffersAccessibilityReset = false
     }
 
     func showAlert(_ message: String) {
         alertOffersAccessibilitySettings = false
+        alertOffersAccessibilityReset = false
         alertMessage = message
     }
 
@@ -1180,6 +1242,11 @@ struct ContentView: View {
         .sheet(isPresented: $showingLaunchAdd) { LaunchRuleEditor(rule: nil).environmentObject(model) }
         .sheet(item: $editingLaunchRule) { rule in LaunchRuleEditor(rule: rule).environmentObject(model) }
         .alert("OctoPilot", isPresented: Binding(get: { model.alertMessage != nil }, set: { if !$0 { model.dismissAlert() } })) {
+            if model.alertOffersAccessibilityReset {
+                Button(model.t("resetAccessibility"), role: .destructive) {
+                    model.resetAccessibilityAndQuit()
+                }
+            }
             if model.alertOffersAccessibilitySettings {
                 Button(model.t("openAccessibilitySettings")) {
                     model.openAccessibilitySettings()

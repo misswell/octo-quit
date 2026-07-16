@@ -3,6 +3,24 @@ import Testing
 @testable import OctoPilot
 
 struct LaunchRuleCodingTests {
+    @Test func accessibilityResetUsesCurrentBundleIdentifier() {
+        let command = AccessibilityResetCommand(bundleIdentifier: "com.misswell.octopilot")
+
+        #expect(command.executableURL == URL(fileURLWithPath: "/usr/bin/tccutil"))
+        #expect(command.arguments == ["reset", "Accessibility", "com.misswell.octopilot"])
+    }
+
+    @Test func accessibilityRecoveryRequestIsConsumedOnlyOnce() throws {
+        let suiteName = "OctoPilotTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        AccessibilityRecoveryRequest.schedule(in: defaults)
+
+        #expect(AccessibilityRecoveryRequest.consume(from: defaults))
+        #expect(!AccessibilityRecoveryRequest.consume(from: defaults))
+    }
+
     @Test func onlyCloseWindowsModeRequiresAccessibility() {
         #expect(!LaunchVisibilityMode.foreground.requiresAccessibility)
         #expect(!LaunchVisibilityMode.hidden.requiresAccessibility)
