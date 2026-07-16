@@ -3,6 +3,11 @@ import Testing
 @testable import OctoPilot
 
 struct LaunchRuleCodingTests {
+    @Test func closeWindowsModeUsesBehaviorBasedName() {
+        #expect(AppText.value("launchModeCloseWindows", language: .simplifiedChinese) == "关闭窗口，保留后台")
+        #expect(AppText.value("launchModeCloseWindows", language: .english) == "Close windows, keep running")
+    }
+
     @Test func formatsLocalizedAppVersion() {
         let info = AppVersionInfo(version: "1.2.3", build: "45")
 
