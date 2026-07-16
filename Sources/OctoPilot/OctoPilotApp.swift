@@ -39,6 +39,22 @@ struct QuitRule: Identifiable, Codable, Hashable {
     var hasAction: Bool { inactiveHideMinutes != nil || inactiveCloseMinutes != nil || inactiveQuitMinutes != nil || hiddenQuitMinutes != nil }
 }
 
+struct AppVersionInfo: Equatable {
+    let version: String
+    let build: String
+
+    static func current(bundle: Bundle = .main) -> AppVersionInfo {
+        AppVersionInfo(
+            version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—",
+            build: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        )
+    }
+
+    func localizedDescription(language: AppLanguage) -> String {
+        AppText.value("versionLabel", language: language, version, build)
+    }
+}
+
 private struct QuitRuntimeState {
     var lastActiveAt: Date?
     var hiddenAt: Date?
@@ -256,6 +272,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
 enum AppText {
     private static let chinese: [String: String] = [
         "rules": "退出", "settings": "设置", "addApp": "添加应用", "apps": "应用",
+        "versionLabel": "版本 %@（构建 %@）",
         "rulesSubtitle": "在应用闲置一段时间后自动隐藏、关闭窗口或退出。",
         "dropApp": "拖入应用以添加规则", "invalidDrop": "请拖入 macOS 应用（.app）以创建规则。",
         "duplicateRule": "已存在 \"%@\" 的规则。", "selfRule": "OctoPilot 不能管理自身。", "enforcing": "规则执行中", "paused": "规则已暂停",
@@ -327,6 +344,7 @@ enum AppText {
 
     private static let english: [String: String] = [
             "rules": "Exit", "settings": "Settings", "addApp": "Add app", "apps": "APPS",
+            "versionLabel": "Version %@ (Build %@)",
             "rulesSubtitle": "Hide, close windows, or quit apps after they’ve been inactive.", "dropApp": "Drop an app to add its rule",
             "invalidDrop": "Drop a macOS application (.app) to create a rule.", "duplicateRule": "A rule for \"%@\" already exists.",
             "selfRule": "OctoPilot cannot manage itself.",
@@ -2104,6 +2122,10 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(model.t("settings")).font(.system(size: 30, weight: .bold))
                 Text(model.t("manageRules")).foregroundStyle(.secondary)
+                Text(AppVersionInfo.current().localizedDescription(language: model.language))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
             }
             Divider()
             VStack(alignment: .leading, spacing: 10) {

@@ -3,6 +3,13 @@ import Testing
 @testable import OctoPilot
 
 struct LaunchRuleCodingTests {
+    @Test func formatsLocalizedAppVersion() {
+        let info = AppVersionInfo(version: "1.2.3", build: "45")
+
+        #expect(info.localizedDescription(language: .simplifiedChinese) == "版本 1.2.3（构建 45）")
+        #expect(info.localizedDescription(language: .english) == "Version 1.2.3 (Build 45)")
+    }
+
     @Test func accessibilityResetUsesCurrentBundleIdentifier() {
         let command = AccessibilityResetCommand(bundleIdentifier: "com.misswell.octopilot")
 
