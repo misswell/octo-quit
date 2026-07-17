@@ -17,7 +17,7 @@ You can pick a running app or browse for an `.app` bundle, reorder rules, pause 
 
 ## BLE Unlock
 
-OctoPilot can also lock and unlock your Mac by proximity of a Bluetooth Low Energy device — an iPhone, Apple Watch, or any BLE device that periodically advertises from a **static MAC address**. It replicates the behavior of [ts1/BLEUnlock](https://github.com/ts1/BLEUnlock).
+OctoPilot can also lock and unlock your Mac by proximity of a Bluetooth Low Energy device - an iPhone, Apple Watch, or any BLE device that periodically advertises from a **static MAC address**.
 
 Open **BLE Unlock** from the sidebar (or the menu-bar menu) and:
 

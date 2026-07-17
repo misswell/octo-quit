@@ -22,7 +22,7 @@ OctoPilot 是一款原生 macOS 菜单栏应用。它会按照你为每个应用
 
 ## BLE 解锁
 
-OctoPilot 还可以根据蓝牙低功耗（BLE）设备的接近程度自动锁定和解锁 Mac——支持 iPhone、Apple Watch，或任何使用**固定 MAC 地址**周期性广播信号的 BLE 设备。功能复刻自 [ts1/BLEUnlock](https://github.com/ts1/BLEUnlock)。
+OctoPilot 还可以根据蓝牙低功耗（BLE）设备的接近程度自动锁定和解锁 Mac--支持 iPhone、Apple Watch，或任何使用**固定 MAC 地址**周期性广播信号的 BLE 设备。
 
 在侧边栏或菜单栏中打开 **BLE 解锁**，然后：
 
