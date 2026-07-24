@@ -43,3 +43,7 @@ Contributor guide for **OctoPilot**, a native macOS menu-bar app (Swift 6, Swift
 - `OctoPilot.entitlements` enables only `com.apple.security.cs.disable-library-validation` — do not add entitlements without justification.
 - The BLE unlock login password lives in **Keychain**; never log it or persist it to `config.json`.
 - Accessibility and Bluetooth are required at runtime; Close Windows mode prompts for Accessibility. Ad-hoc local builds may re-prompt Accessibility each rebuild — distribute with a stable Developer ID to preserve grants.
+
+## Project Summary
+
+The repo-root `SUMMARY.md` is the project's Chinese development summary (features, release flow, pitfalls). Consult it for fuller context beyond this contributor guide.
