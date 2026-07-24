@@ -4,8 +4,9 @@ Contributor guide for **OctoPilot**, a native macOS menu-bar app (Swift 6, Swift
 
 ## Project Structure & Module Organization
 
-- `Sources/OctoPilot/` — single executable target: `OctoPilotApp.swift` (core) and `BLEUnlock.swift` (proximity lock/unlock).
-- `Tests/OctoPilotTests/` — Swift Testing suites (`LaunchRuleCodingTests.swift`, `BLEUnlockPerformanceTests.swift`).
+- `Sources/OctoPilot/` — main executable target: `OctoPilotApp.swift` (core), `BLEUnlock.swift` (proximity lock/unlock), and `SoftwareUpdate.swift` (release checks, validation, and update orchestration).
+- `Sources/OctoPilotUpdater/` — small helper executable that atomically replaces the verified app bundle and relaunches it after the main process exits.
+- `Tests/OctoPilotTests/` — Swift Testing suites (`LaunchRuleCodingTests.swift`, `BLEUnlockPerformanceTests.swift`, `SoftwareUpdateTests.swift`).
 - `Resources/` — `Info.plist`, `OctoPilot.entitlements`, `AppIcon.icns`, icon sources.
 - `Scripts/` — `build-app.sh`, `distribute-app.sh`, `version.sh`.
 - `.github/workflows/build.yml` — CI.

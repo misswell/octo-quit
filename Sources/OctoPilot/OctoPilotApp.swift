@@ -406,7 +406,17 @@ enum AppText {
         "bleNoPassword": "未设置密码", "blePasswordSet": "密码已保存",
         "bleAccessRequired": "BLE 解锁需要辅助功能权限来模拟键盘解锁并锁定屏幕。当前应用：%@", "bleBluetoothRequired": "需要蓝牙权限才能扫描 BLE 设备。",
         "bleNoDevicesFound": "未发现附近 BLE 设备。",
-        "bleSortBy": "排序", "bleSortAdded": "加载顺序", "bleSortName": "名称", "bleSortSignal": "信号"
+        "bleSortBy": "排序", "bleSortAdded": "加载顺序", "bleSortName": "名称", "bleSortSignal": "信号",
+        "softwareUpdate": "软件更新", "updateDescription": "从 GitHub Releases 检查经过签名和 Apple 公证的新版本。",
+        "checkForUpdates": "检查更新…", "checkingForUpdates": "正在检查更新…", "upToDate": "已是最新版本。",
+        "updateAvailable": "发现新版本 %@。", "downloadAndInstall": "下载并安装", "downloadingUpdate": "正在下载更新…",
+        "preparingUpdate": "正在验证并准备安装…", "updateFailed": "更新失败：%@", "currentVersion": "当前版本：%@",
+        "releaseNotes": "发布说明", "updateWillRestart": "安装后 OctoPilot 将自动重新启动。",
+        "updateErrorRelease": "GitHub Release 信息或 macOS 安装包无效。", "updateErrorIntegrity": "下载文件的 SHA-256 校验失败。",
+        "updateErrorVerification": "更新包未通过版本、开发者签名或 Gatekeeper 验证。",
+        "updateErrorLocation": "无法从当前位置自动更新。请先将 OctoPilot 移到可写的“应用程序”文件夹。",
+        "updateErrorHelper": "当前 OctoPilot 安装中缺少更新 helper。", "updateErrorNetwork": "网络请求失败：%@",
+        "updateErrorCommand": "准备更新失败：%@"
     ]
 
     static func value(_ key: String, language: AppLanguage, _ arguments: CVarArg...) -> String {
@@ -504,7 +514,17 @@ enum AppText {
             "bleNoPassword": "No password set", "blePasswordSet": "Password saved",
             "bleAccessRequired": "BLE Unlock needs Accessibility access to simulate keystrokes for unlocking and to lock the screen. Current app: %@", "bleBluetoothRequired": "Bluetooth permission is required to scan for BLE devices.",
             "bleNoDevicesFound": "No nearby BLE devices found.",
-            "bleSortBy": "Sort", "bleSortAdded": "Added", "bleSortName": "Name", "bleSortSignal": "Signal"
+            "bleSortBy": "Sort", "bleSortAdded": "Added", "bleSortName": "Name", "bleSortSignal": "Signal",
+            "softwareUpdate": "Software Update", "updateDescription": "Check GitHub Releases for versions signed and notarized by Apple.",
+            "checkForUpdates": "Check for Updates…", "checkingForUpdates": "Checking for updates…", "upToDate": "OctoPilot is up to date.",
+            "updateAvailable": "Version %@ is available.", "downloadAndInstall": "Download and Install", "downloadingUpdate": "Downloading update…",
+            "preparingUpdate": "Verifying and preparing the update…", "updateFailed": "Update failed: %@", "currentVersion": "Current version: %@",
+            "releaseNotes": "Release Notes", "updateWillRestart": "OctoPilot will restart automatically after installation.",
+            "updateErrorRelease": "The GitHub release or macOS archive is invalid.", "updateErrorIntegrity": "The downloaded file failed its SHA-256 integrity check.",
+            "updateErrorVerification": "The update failed its version, developer signature, or Gatekeeper verification.",
+            "updateErrorLocation": "OctoPilot cannot update itself from this location. Move it to a writable Applications folder first.",
+            "updateErrorHelper": "The updater helper is missing from this OctoPilot installation.", "updateErrorNetwork": "Network request failed: %@",
+            "updateErrorCommand": "Couldn’t prepare the update: %@"
         ]
 }
 
@@ -559,6 +579,7 @@ final class OctoPilotModel: ObservableObject {
     @Published private(set) var launchesAtLogin = false
     @Published var language: AppLanguage = .system { didSet { saveIfReady() } }
     let ble = BLEUnlockModel()
+    let updater = SoftwareUpdater()
     @Published var requestedSection: MainSection?
     private var launchTasks: [UUID: Task<Void, Never>] = [:]
     private let launchGate = LaunchGate(minimumStartInterval: 3)
@@ -593,6 +614,11 @@ final class OctoPilotModel: ObservableObject {
         ble.persist = { [weak self] in self?.saveIfReady() }
         ble.startObservingSystemState()
         ble.activateFromConfiguration()
+        Task { [weak updater] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            await updater?.checkForUpdates()
+        }
     }
 
     var enabledCount: Int { rules.filter(\.isEnabled).count }
@@ -2598,6 +2624,11 @@ struct MenuBarView: View {
             Button(model.t("bleSelectDevice")) { model.requestedSection = .ble; showMainWindow() }
         }
         Divider()
+        UpdateMenuItems(updater: model.updater) {
+            model.requestedSection = .settings
+            showMainWindow()
+        }
+        Divider()
         Button(model.t("quitApp")) { NSApp.terminate(nil) }
     }
 
@@ -2625,49 +2656,72 @@ struct MenuBarView: View {
     }
 }
 
+private struct UpdateMenuItems: View {
+    @EnvironmentObject private var model: OctoPilotModel
+    @ObservedObject var updater: SoftwareUpdater
+    let showSettings: () -> Void
+
+    var body: some View {
+        if let release = updater.state.availableRelease {
+            Button(model.t("updateAvailable", release.version.description), action: showSettings)
+        } else if let activity = updater.state.activity {
+            Text(model.t(activity.rawValue))
+        } else {
+            Button(model.t("checkForUpdates")) {
+                showSettings()
+                Task { await updater.checkForUpdates() }
+            }
+        }
+    }
+
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var model: OctoPilotModel
     @State private var quitterImportPreview: QuitterImportPreview?
     var body: some View {
-        VStack(alignment: .leading, spacing: 26) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(model.t("settings")).font(.system(size: 30, weight: .bold))
-                Text(model.t("manageRules")).foregroundStyle(.secondary)
-                Text(AppVersionInfo.current().localizedDescription(language: model.language))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .textSelection(.enabled)
-            }
-            Divider()
-            VStack(alignment: .leading, spacing: 10) {
-                Text(model.t("language")).font(.headline)
-                Text(model.t("languageDescription")).font(.subheadline).foregroundStyle(.secondary)
-                Picker(model.t("language"), selection: $model.language) {
-                    Text(model.t("systemLanguage")).tag(AppLanguage.system)
-                    Text(model.t("english")).tag(AppLanguage.english)
-                    Text(model.t("simplifiedChinese")).tag(AppLanguage.simplifiedChinese)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 26) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(model.t("settings")).font(.system(size: 30, weight: .bold))
+                    Text(model.t("manageRules")).foregroundStyle(.secondary)
+                    Text(AppVersionInfo.current().localizedDescription(language: model.language))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
                 }
-                .labelsHidden().pickerStyle(.segmented).frame(width: 390)
+                Divider()
+                SoftwareUpdateSettingsView(updater: model.updater, language: model.language)
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(model.t("language")).font(.headline)
+                    Text(model.t("languageDescription")).font(.subheadline).foregroundStyle(.secondary)
+                    Picker(model.t("language"), selection: $model.language) {
+                        Text(model.t("systemLanguage")).tag(AppLanguage.system)
+                        Text(model.t("english")).tag(AppLanguage.english)
+                        Text(model.t("simplifiedChinese")).tag(AppLanguage.simplifiedChinese)
+                    }
+                    .labelsHidden().pickerStyle(.segmented).frame(width: 390)
+                }
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(model.t("configFile")).font(.headline)
+                    Text(model.t("configDescription")).font(.subheadline).foregroundStyle(.secondary)
+                    Text(model.configurationFilePath)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    Button(model.t("revealInFinder")) { model.revealConfigurationFile() }
+                }
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(model.t("importQuitter")).font(.headline)
+                    Text(model.t("importQuitterDescription")).font(.subheadline).foregroundStyle(.secondary)
+                    Button(model.t("importQuitter")) { quitterImportPreview = model.prepareQuitterImportFromDefaultLocation() }
+                }
             }
-            Divider()
-            VStack(alignment: .leading, spacing: 10) {
-                Text(model.t("configFile")).font(.headline)
-                Text(model.t("configDescription")).font(.subheadline).foregroundStyle(.secondary)
-                Text(model.configurationFilePath)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                Button(model.t("revealInFinder")) { model.revealConfigurationFile() }
-            }
-            Divider()
-            VStack(alignment: .leading, spacing: 10) {
-                Text(model.t("importQuitter")).font(.headline)
-                Text(model.t("importQuitterDescription")).font(.subheadline).foregroundStyle(.secondary)
-                Button(model.t("importQuitter")) { quitterImportPreview = model.prepareQuitterImportFromDefaultLocation() }
-            }
-            Spacer()
+            .padding(.horizontal, 36).padding(.top, 34).padding(.bottom, 30)
         }
-        .padding(.horizontal, 36).padding(.top, 34).padding(.bottom, 30)
         .alert(model.t("importQuitterConfirmTitle"), isPresented: Binding(get: { quitterImportPreview != nil }, set: { if !$0 { quitterImportPreview = nil } })) {
             Button(model.t("cancel"), role: .cancel) { quitterImportPreview = nil }
             Button(model.t("import")) {
@@ -2681,4 +2735,71 @@ struct SettingsView: View {
         }
     }
 
+}
+
+private struct SoftwareUpdateSettingsView: View {
+    @ObservedObject var updater: SoftwareUpdater
+    let language: AppLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(t("softwareUpdate")).font(.headline)
+            Text(t("updateDescription")).font(.subheadline).foregroundStyle(.secondary)
+            Text(t("currentVersion", updater.currentVersion)).font(.caption).foregroundStyle(.tertiary)
+
+            switch updater.state {
+            case .idle:
+                checkButton
+            case .checking:
+                progress(t("checkingForUpdates"))
+            case .upToDate:
+                Label(t("upToDate"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                checkButton
+            case .available(let release):
+                Label(t("updateAvailable", release.version.description), systemImage: "arrow.down.circle.fill")
+                    .foregroundStyle(.tint)
+                if !release.releaseNotes.isEmpty {
+                    Text(t("releaseNotes")).font(.subheadline.weight(.semibold))
+                    Text(release.releaseNotes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                Text(t("updateWillRestart")).font(.caption).foregroundStyle(.secondary)
+                Button(t("downloadAndInstall")) {
+                    Task { await updater.downloadAndInstall() }
+                }
+                .buttonStyle(.borderedProminent)
+            case .downloading:
+                progress(t("downloadingUpdate"))
+            case .installing:
+                progress(t("preparingUpdate"))
+            case .failed(let failure):
+                Label(t("updateFailed", localized(failure)), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                checkButton
+            }
+        }
+    }
+
+    private var checkButton: some View {
+        Button(t("checkForUpdates")) { Task { await updater.checkForUpdates() } }
+            .disabled(updater.state.isBusy)
+    }
+
+    private func progress(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text(message).foregroundStyle(.secondary)
+        }
+    }
+
+    private func t(_ key: String, _ arguments: CVarArg...) -> String {
+        AppText.value(key, language: language, arguments: arguments)
+    }
+
+    private func localized(_ failure: SoftwareUpdateFailure) -> String {
+        if let detail = failure.detail { return t(failure.message.rawValue, detail) }
+        return t(failure.message.rawValue)
+    }
 }
