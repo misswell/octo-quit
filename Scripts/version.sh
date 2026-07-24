@@ -6,6 +6,12 @@ cd "$ROOT"
 
 TAG="$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --abbrev=0 2>/dev/null || true)"
 
+# In CI, GITHUB_REF_NAME gives the exact tag being built; prefer it over git describe
+# when multiple tags point at the same commit (e.g. v1.1.8 and v1.1.9 on one commit).
+if [[ -n "${GITHUB_REF_NAME:-}" && "${GITHUB_REF_NAME}" == v[0-9]*.[0-9]*.[0-9]* ]]; then
+    TAG="${GITHUB_REF_NAME}"
+fi
+
 if [[ -n "$TAG" ]]; then
     BASE_VERSION="${TAG#v}"
     COMMITS_SINCE_TAG="$(git rev-list --count "$TAG"..HEAD)"
