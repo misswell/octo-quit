@@ -28,10 +28,33 @@ struct OctoPilotApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // 登录启动时（父进程为 loginwindow）不弹出主窗口，仅保留菜单栏图标。
+    /// 登录启动期间为 true，用于隐藏主窗口，避免开机时窗口闪现。
+    private var hideWindowDuringLaunch = false
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // 尽早判断登录启动：此时 SwiftUI 尚未完成窗口显示，先隐藏已存在的窗口以减少闪现。
         // 手动双击启动时父进程不是 loginwindow，主窗口正常显示。
-        guard Self.wasLaunchedAtLogin() else { return }
+        hideWindowDuringLaunch = Self.wasLaunchedAtLogin()
+        if hideWindowDuringLaunch { hideRegularWindows() }
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // 登录启动时不弹出主窗口，仅保留菜单栏图标，应用在后台运行。
+        guard hideWindowDuringLaunch else { return }
+        hideRegularWindows()
+        // SwiftUI 可能在本回调之后才完成主窗口的显示，
+        // 延迟一小段时间再次隐藏以兜底，确保开机时无窗口闪现。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            // 仅当应用仍处于后台（用户尚未主动激活）时隐藏，
+            // 避免误隐藏用户从菜单栏主动打开的窗口。
+            guard NSApp.isActive == false else { return }
+            self?.hideRegularWindows()
+        }
+        hideWindowDuringLaunch = false
+    }
+
+    /// 隐藏所有非面板窗口（菜单栏弹窗等面板不受影响），仅保留菜单栏图标。
+    private func hideRegularWindows() {
         for window in NSApp.windows where !window.isKind(of: NSPanel.self) {
             window.orderOut(nil)
         }
