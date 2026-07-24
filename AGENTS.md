@@ -30,6 +30,7 @@ Contributor guide for **OctoPilot**, a native macOS menu-bar app (Swift 6, Swift
 - Framework: **Swift Testing** (`import Testing`; `@Test`, `#expect`, `#require`). Suites are `struct`s of `@testable import OctoPilot` functions.
 - Name tests as sentences describing the invariant. Use `UserDefaults(suiteName:)` with a UUID for stateful tests and clean up via `defer`.
 - Run `swift test` before pushing.
+- Before tagging a release, also run a fresh release build with `-Xswiftc -warnings-as-errors`. GitHub's macOS runner may promote Swift concurrency diagnostics that are only warnings in a cached local build.
 
 ## Commit & Pull Request Guidelines
 
@@ -37,12 +38,17 @@ Contributor guide for **OctoPilot**, a native macOS menu-bar app (Swift 6, Swift
 - PRs target `main`. Describe what and why, link issues, and call out Accessibility/Bluetooth behavior changes.
 - CI builds, packages, and verifies the signature on every push/PR — do not merge if `build` fails.
 - Version tags `v<major>.<minor>.<patch>` trigger the `dist` job and a GitHub Release.
+- Push the release commit to `main` before creating the version tag. Never move or overwrite an already-pushed version tag; publish a new patch version for release fixes.
+- A pushed tag is not proof of a published release. Verify the Actions `dist` job and `gh release view <tag>` both succeed, and confirm the ZIP asset is present.
 
 ## Security & Signing
 
 - `OctoPilot.entitlements` enables only `com.apple.security.cs.disable-library-validation` — do not add entitlements without justification.
 - The BLE unlock login password lives in **Keychain**; never log it or persist it to `config.json`.
 - Accessibility and Bluetooth are required at runtime; Close Windows mode prompts for Accessibility. Ad-hoc local builds may re-prompt Accessibility each rebuild — distribute with a stable Developer ID to preserve grants.
+- The tag workflow requires exactly six Actions secrets: `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_DEVELOPER_ID`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`.
+- `APPLE_ID` is the Apple Developer login email; `APPLE_APP_SPECIFIC_PASSWORD` is generated at account.apple.com. Never paste an app-specific password into chat or a command argument; revoke it immediately if exposed.
+- A local `OCTOPILOT_NOTARY_PROFILE` is optional and must be verified before use. Do not assume a profile named `OctoPilot` exists merely because a previous release succeeded.
 
 ## Project Summary
 
